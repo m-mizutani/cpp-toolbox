@@ -5,7 +5,7 @@
 #include <sstream>
 #include <string>
 
-namespace netdec {
+namespace tb {
 namespace Exception {
 
 // Exception::Error is base exception of cpptb.
@@ -25,13 +25,13 @@ class Error : public std::exception {
 
 // ConfigError for invalid preparation.
 
-class ConfigError : public Error {
+class NoDataError : public Error {
  public:
-  explicit ConfigError(const std::string &errmsg) : Error(errmsg) {}
+  explicit NoDataError(const std::string &errmsg) : Error(errmsg) {}
 };
 
 
 }   // namespace Exception
-}   // namespace netdec
+}   // namespace tb
 
 #endif    // __CPPTB_EXCEPTION_HPP

@@ -34,15 +34,16 @@ ENDIF()
 # Build library
 
 FILE(GLOB BASESRCS
-	"src/buffer.cc"	
-)
-FILE(GLOB HEADERS
+	"src/buffer.cc"	 "src/buffer.hpp"
+	"src/hash.cc"	   "src/hash.hpp"
   "src/cpptb.hpp"
   "src/exception.hpp"
   "src/cache.hpp"
-  "src/buffer.hpp"
 )
-FILE(GLOB TESTSRCS "test/*.cc")
+FILE(GLOB TESTSRCS "test/*.cc"
+	"./test/gtest/gtest-all.cc"
+	"./test/gtest/main.cc"
+	)
 
 
 # Library

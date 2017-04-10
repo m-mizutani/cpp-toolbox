@@ -24,39 +24,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CPPTB_SRC_BUFFER_HPP__
-#define CPPTB_SRC_BUFFER_HPP__
+#ifndef CPPTB_SRC_HASH_HPP__
+#define CPPTB_SRC_HASH_HPP__
 
+#include <stdint.h>
 #include <sys/types.h>
 
 namespace tb {
-
-class Buffer {
- private:
-  void *buf_;
-  size_t len_;
-  size_t buflen_;
-  bool finalized_;
-
- public:
-  Buffer();
-  Buffer(const Buffer& obj);
-  Buffer(const void* ptr, size_t len);
-  virtual ~Buffer();
-
-  bool operator==(const Buffer& obj) const;
-
-  void resize(size_t len);
-  void clear();
-  void set(const void* ptr, size_t len);
-  void append(const void* ptr, size_t len);
-  virtual void finalize();
-
-  const void* ptr() const { return (this->len_ > 0) ? this->buf_ : nullptr; }
-  size_t len() const { return this->len_; }
-  bool finalized() const { return this->finalized_; }
-};
-
+  uint32_t hash32(const void *ptr, size_t len);
 }  // namespace tb
 
-#endif  // CPPTB_SRC_LRU_HPP__
+#endif  // CPPTB_SRC_HASH_HPP__

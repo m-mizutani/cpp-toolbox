@@ -24,39 +24,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CPPTB_SRC_BUFFER_HPP__
-#define CPPTB_SRC_BUFFER_HPP__
-
-#include <sys/types.h>
+#include "./hash.hpp"
+#include "./debug.hpp"
 
 namespace tb {
+  // from Chromium
+  // https://chromium.googlesource.com/chromium/src/base/+/master/hash.h
 
-class Buffer {
- private:
-  void *buf_;
-  size_t len_;
-  size_t buflen_;
-  bool finalized_;
+inline uint32_t hash32_2value(uint32_t value1, uint32_t value2) {
+  uint64_t value1_64 = value1;
+  uint64_t hash64 = (value1_64 << 32) | value2;
+  if (sizeof(uint32_t) >= sizeof(uint64_t))
+    return static_cast<uint32_t>(hash64);
+  uint64_t odd_random = 481046412LL << 32 | 1025306955LL;
+  uint32_t shift_random = 10121U << 16;
+  hash64 = hash64 * odd_random + shift_random;
+  uint32_t high_bits = static_cast<uint32_t>
+  (hash64 >> (8 * (sizeof(uint64_t) - sizeof(uint32_t))));
+  return high_bits;
+}
 
- public:
-  Buffer();
-  Buffer(const Buffer& obj);
-  Buffer(const void* ptr, size_t len);
-  virtual ~Buffer();
 
-  bool operator==(const Buffer& obj) const;
+uint32_t hash32(const void *ptr, size_t data_len) {
+  const uint32_t *p = static_cast<const uint32_t*>(ptr);
+  uint32_t v = 0;
+  size_t len;
+  for (len = data_len; len >= 4; len -= 4, p++) {
+    v = hash32_2value(v, *p);
+  }
 
-  void resize(size_t len);
-  void clear();
-  void set(const void* ptr, size_t len);
-  void append(const void* ptr, size_t len);
-  virtual void finalize();
+  uint32_t r = *p;
+  if (len > 0) {
+    uint32_t a = r & (0xffffffff >> (8 * (4 - len)));
+    debug(false, "len:%zd, %08x, %08x", len, r, a);
+    v = hash32_2value(v, a);
+  }
 
-  const void* ptr() const { return (this->len_ > 0) ? this->buf_ : nullptr; }
-  size_t len() const { return this->len_; }
-  bool finalized() const { return this->finalized_; }
-};
+  return v;
+}
 
 }  // namespace tb
-
-#endif  // CPPTB_SRC_LRU_HPP__

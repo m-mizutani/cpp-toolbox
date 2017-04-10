@@ -37,6 +37,13 @@ test/gtest*
 > (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 > OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+src/utils/hash.cc
+-----------------
+
+- Original: Chromium
+- Author: Google Inc.
+- https://chromium.googlesource.com/chromium/src/base/+/master/hash.h
+- Lisence: The BSD 3-Clause License
 
 other all files
 -----------------

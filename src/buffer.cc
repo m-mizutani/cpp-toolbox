@@ -33,7 +33,7 @@
 
 #include "./debug.hpp"
 
-namespace pm {
+namespace tb {
 
 Buffer::Buffer()
     : buf_(nullptr), len_(0), buflen_(0), finalized_(false) {
@@ -99,4 +99,4 @@ void Buffer::finalize() {
 }
 
 
-}  // namespace pm
+}  // namespace tb

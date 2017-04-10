@@ -24,8 +24,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PACKETMACHINE_UTILS_LRU_HPP__
-#define PACKETMACHINE_UTILS_LRU_HPP__
+#ifndef CPPTB_SRC_CACHE_HPP__
+#define CPPTB_SRC_CACHE_HPP__
 
 #include <assert.h>
 
@@ -33,12 +33,12 @@
 #include <vector>
 #include <deque>
 #include <string>
-#include "../packetmachine/exception.hpp"
+#include "./exception.hpp"
 #include "./buffer.hpp"
 #include "./hash.hpp"
-#include "../debug.hpp"
+#include "./debug.hpp"
 
-namespace pm {
+namespace tb {
 
 template <typename T>
 class LruHash {
@@ -312,5 +312,5 @@ class LruHash {
 
 }  // namespace pm
 
-#endif  // PACKETMACHINE_UTILS_LRU_HPP__
+#endif  // CPPTB_SRC_CACHE_HPP__
 

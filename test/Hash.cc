@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2016 Masayoshi Mizutani <mizutani@sfc.wide.ad.jp>
- * All rights reserved.
+ * Copyright (c) 2016 Masayoshi Mizutani <mizutani@sfc.wide.ad.jp> All
+ * rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,39 +24,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CPPTB_SRC_BUFFER_HPP__
-#define CPPTB_SRC_BUFFER_HPP__
+#include "./gtest/gtest.h"
+#include "../src/hash.hpp"
 
-#include <sys/types.h>
+TEST(Hash, basic) {
+  char d1[] = "abcdefgh";
+  char d2[] = "abcdefXX";
+  EXPECT_NE(tb::hash32(d1, 4), tb::hash32(d1, 5));
+  EXPECT_EQ(tb::hash32(d1, 6), tb::hash32(d2, 6));
+  EXPECT_NE(tb::hash32(d1, 7), tb::hash32(d2, 7));
+}
 
-namespace tb {
 
-class Buffer {
- private:
-  void *buf_;
-  size_t len_;
-  size_t buflen_;
-  bool finalized_;
-
- public:
-  Buffer();
-  Buffer(const Buffer& obj);
-  Buffer(const void* ptr, size_t len);
-  virtual ~Buffer();
-
-  bool operator==(const Buffer& obj) const;
-
-  void resize(size_t len);
-  void clear();
-  void set(const void* ptr, size_t len);
-  void append(const void* ptr, size_t len);
-  virtual void finalize();
-
-  const void* ptr() const { return (this->len_ > 0) ? this->buf_ : nullptr; }
-  size_t len() const { return this->len_; }
-  bool finalized() const { return this->finalized_; }
-};
-
-}  // namespace tb
-
-#endif  // CPPTB_SRC_LRU_HPP__
