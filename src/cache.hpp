@@ -100,23 +100,21 @@ class LruHash {
     }
     virtual ~Node() {}
 
+    // Read only methods
     T data() const { return this->data_; }
-    virtual bool is_null() const {
-      return (this->key_.len() == 0);
-    }
-
-    void set_update(uint64_t curr_tick) {
-      this->update_ = curr_tick;
-    }
-
+    virtual bool is_null() const { return (this->key_.len() == 0); }
     uint64_t tick() const { return this->tick_; }
     uint64_t update() const { return this->update_; }
     bool active() const { return this->active_; }
+    const HashKey& key() const { return this->key_; }
 
+    // Updatable methods
+    void set_update(uint64_t curr_tick) {
+      this->update_ = curr_tick;
+    }
     void deactivate() {
       this->active_ = false;
     }
-    
     void attach(Node *node) {
       Node *prev = this;
       Node *next = this->next_;
@@ -171,10 +169,6 @@ class LruHash {
         return nullptr;
       }
     }
-
-    const HashKey& key() const {
-      return this->key_;
-    }
   };
 
  private:
@@ -216,21 +210,7 @@ class LruHash {
   Node exp_node_;
   static const size_t DEFAULT_BUCKET_SIZE = 1031;
   Node null_node_;
-
- public:
-  static inline uint32_t key2hv(const Buffer& key) {
-    return hash32(key.ptr(), key.len());
-  }
-
-  explicit LruHash(size_t timeslot_size,
-                   size_t bucket_size = DEFAULT_BUCKET_SIZE)
-      : timeslot_(timeslot_size), bucket_(bucket_size), curr_tick_(0) {
-    if (this->bucket_.size() == 0) {
-      this->bucket_.resize(DEFAULT_BUCKET_SIZE);
-    }
-  }
-  ~LruHash() {
-  }
+  bool auto_update_;
 
   void insert(Node* node, uint64_t tick) {
     size_t ptr = node->key().hv() % this->bucket_.size();
@@ -238,6 +218,27 @@ class LruHash {
 
     size_t tp = (tick + this->curr_tick_) % this->timeslot_.size();
     this->timeslot_[tp].push(node);
+  }
+
+  Node* lookup(const HashKey& key) {
+    size_t ptr = key.hv() % this->bucket_.size();
+    return this->bucket_[ptr].search(key);
+  }
+  
+  static inline uint32_t key2hv(const Buffer& key) {
+    return hash32(key.ptr(), key.len());
+  }
+  
+ public:
+  explicit LruHash(size_t timeslot_size,
+                   size_t bucket_size = DEFAULT_BUCKET_SIZE)
+      : timeslot_(timeslot_size), bucket_(bucket_size), curr_tick_(0),
+        auto_update_(true) {
+    if (this->bucket_.size() == 0) {
+      this->bucket_.resize(DEFAULT_BUCKET_SIZE);
+    }
+  }
+  ~LruHash() {    
   }
 
   bool put(uint64_t tick, const HashKey& key, T data) {
@@ -257,12 +258,14 @@ class LruHash {
 
   const Node& get(const HashKey& key) {
     // Updated if hitting cache
-    size_t ptr = key.hv() % this->bucket_.size();
-    Node* node = this->bucket_[ptr].search(key);
+    Node* node = this->lookup(key);
+    
     if (node == nullptr) {
       node = &(this->null_node_);
     } else {
-      node->set_update(this->curr_tick_);
+      if (this->auto_update_) {
+        node->set_update(this->curr_tick_);
+      }
     }
 
     return *node;
@@ -270,8 +273,7 @@ class LruHash {
 
   bool remove(const HashKey& key) {
     // Updated if hitting cache
-    size_t ptr = key.hv() % this->bucket_.size();
-    Node* node = this->bucket_[ptr].search(key);
+    Node* node = this->lookup(key);
 
     if (node == nullptr) {
       return false;
@@ -283,12 +285,21 @@ class LruHash {
   }
   
   bool has(const HashKey& key) {
-    size_t ptr = key.hv() % this->bucket_.size();
-		auto node = this->bucket_[ptr].search(key);
+    Node* node = this->lookup(key);
     return (node != nullptr && node->active());
   }
 
-  void update(uint64_t tick = 1) {   // progress tick
+  bool update(const HashKey& key) {
+    Node* node = this->lookup(key);
+    if (node) {
+      node->set_update(this->curr_tick_);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void step(uint64_t tick = 1) {   // progress tick
     const uint64_t base_tick = this->curr_tick_;
     this->curr_tick_ += tick;
 
@@ -319,7 +330,7 @@ class LruHash {
     return this->exp_node_.has_link();
   }
 
-  T pop() {
+  T pop_expired() {
     Node* node = this->exp_node_.pop_link();
     if (node) {
       T data = node->data();
@@ -329,6 +340,8 @@ class LruHash {
       throw Exception::NoDataError("no more expired data");
     }
   }  // pop expired node
+
+  void set_auto_update(bool b) { this->auto_update_ = b; }
 };
 
 }  // namespace pm

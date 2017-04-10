@@ -51,15 +51,15 @@ TEST(LruHash, basic) {
   EXPECT_FALSE(lru.has_expired());
 
   // still alive
-  lru.update(1);
+  lru.step(1);
   EXPECT_TRUE(lru.has(k1));
   EXPECT_FALSE(lru.has_expired());
 
   // expired
-  lru.update(1);
+  lru.step(1);
   EXPECT_FALSE(lru.has(k1));
   EXPECT_TRUE(lru.has_expired());
-  EXPECT_EQ(&d1, lru.pop());
+  EXPECT_EQ(&d1, lru.pop_expired());
 }
 
 TEST(LruHash, remove) {
@@ -75,7 +75,7 @@ TEST(LruHash, remove) {
   EXPECT_FALSE(lru.has_expired());
 
   // still alive
-  lru.update(1);
+  lru.step(1);
   EXPECT_TRUE(lru.has(k1));
   EXPECT_FALSE(lru.has_expired());
 
@@ -85,11 +85,85 @@ TEST(LruHash, remove) {
   EXPECT_FALSE(lru.has_expired());
 	
   // expired
-  lru.update(1);
+  lru.step(1);
   EXPECT_FALSE(lru.has(k1));
   EXPECT_FALSE(lru.has_expired());
 }
 	
+TEST(LruHash, auto_update_on) {
+  tb::LruHash<MyData*> lru(10);
+  MyData d1(1);
+  tb::HashKey k1(&d1.a_, sizeof(d1.a_));
+
+  // put node
+  EXPECT_TRUE(lru.put(2, k1, &d1));
+  lru.step(1);
+  
+  // auto updated
+  auto n = lru.get(k1);
+  EXPECT_FALSE(n.is_null());
+  EXPECT_FALSE(lru.has_expired());
+
+  // not expired
+  lru.step(1);
+  EXPECT_TRUE(lru.has(k1));
+  EXPECT_FALSE(lru.has_expired());
+
+  // expired
+  lru.step(1);
+  EXPECT_FALSE(lru.has(k1));
+  EXPECT_TRUE(lru.has_expired());  
+  EXPECT_EQ(&d1, lru.pop_expired());
+}
+
+TEST(LruHash, auto_update_off) {
+  tb::LruHash<MyData*> lru(10);
+  MyData d1(1);
+  tb::HashKey k1(&d1.a_, sizeof(d1.a_));
+
+  lru.set_auto_update(false);
+  
+  // put node
+  EXPECT_TRUE(lru.put(2, k1, &d1));
+  lru.step(1);
+  
+  // not auto updated
+  auto n = lru.get(k1);
+  EXPECT_FALSE(n.is_null());
+  EXPECT_FALSE(lru.has_expired());
+
+  // expired
+  lru.step(1);
+  EXPECT_FALSE(lru.has(k1));
+  EXPECT_TRUE(lru.has_expired());  
+  EXPECT_EQ(&d1, lru.pop_expired());
+}
+
+TEST(LruHash, manual_update) {
+  tb::LruHash<MyData*> lru(10);
+  MyData d1(1);
+  tb::HashKey k1(&d1.a_, sizeof(d1.a_));
+
+  lru.set_auto_update(false);
+  
+  // put node
+  EXPECT_TRUE(lru.put(2, k1, &d1));
+  lru.step(1);
+  
+  // manually update
+  lru.update(k1);
+
+  // not expired
+  lru.step(1);
+  EXPECT_TRUE(lru.has(k1));
+  EXPECT_FALSE(lru.has_expired());
+
+  // expired
+  lru.step(1);
+  EXPECT_FALSE(lru.has(k1));
+  EXPECT_TRUE(lru.has_expired());  
+  EXPECT_EQ(&d1, lru.pop_expired());
+}
 
 TEST(LruHash, multiple_data) {
   tb::LruHash<MyData*> lru(10);
@@ -108,11 +182,11 @@ TEST(LruHash, multiple_data) {
   EXPECT_FALSE(n2.is_null());
   EXPECT_EQ(&d2, n2.data());
 
-  lru.update(2);
+  lru.step(2);
   EXPECT_FALSE(lru.has(k1));  // expired
   EXPECT_TRUE(lru.has(k2));   // still alive
 
-  lru.update(1);
+  lru.step(1);
   EXPECT_FALSE(lru.has(k1));  // expired
   EXPECT_FALSE(lru.has(k2));  // expired
 }
@@ -132,7 +206,7 @@ TEST(LruHash, update) {
   EXPECT_TRUE(lru.put(3, k2, &d2));
   EXPECT_TRUE(lru.put(3, k3, &d3));
 
-  lru.update(2);  // tick: 2
+  lru.step(2);  // tick: 2
 
   auto n1 = lru.get(k1);   // k1 hit cache, and updated.
   // next expiring tick is 2 (current tick) + 3 (original TTL)  = 5
@@ -149,13 +223,13 @@ TEST(LruHash, update) {
   EXPECT_TRUE(lru.has(k2));   // k2 is still alive
   EXPECT_TRUE(lru.has(k3));   // k3 is still alive
 
-  lru.update(1);  // tick: 3
+  lru.step(1);  // tick: 3
 
   EXPECT_TRUE(lru.has(k1));   // k1 is still alive
   EXPECT_TRUE(lru.has(k2));   // k2 is still alive
   EXPECT_FALSE(lru.has(k3));  // k3 has been expired
 
-  lru.update(1);  // tick: 4
+  lru.step(1);  // tick: 4
 
   EXPECT_TRUE(lru.has(k1));   // k1 is still alive
   EXPECT_TRUE(lru.has(k2));   // k2 is still alive
@@ -166,19 +240,19 @@ TEST(LruHash, update) {
   EXPECT_FALSE(n2.is_null());
   EXPECT_EQ(&d2, n2.data());
 
-  lru.update(1);  // tick: 5
+  lru.step(1);  // tick: 5
 
   EXPECT_FALSE(lru.has(k1));  // k1 has been expired
   EXPECT_TRUE(lru.has(k2));   // k2 is still alive
   EXPECT_FALSE(lru.has(k3));  // k3 has been expired
 
-  lru.update(1);  // tick: 6
+  lru.step(1);  // tick: 6
 
   EXPECT_FALSE(lru.has(k1));  // k1 has been expired
   EXPECT_TRUE(lru.has(k2));   // k2 is still alive
   EXPECT_FALSE(lru.has(k3));  // k3 has been expired
 
-  lru.update(1);  // tick: 7
+  lru.step(1);  // tick: 7
 
   EXPECT_FALSE(lru.has(k1));  // k1 has been expired
   EXPECT_FALSE(lru.has(k2));  // k2 has been expired
