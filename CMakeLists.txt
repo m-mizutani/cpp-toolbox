@@ -34,7 +34,6 @@ ENDIF()
 # Build library
 
 FILE(GLOB BASESRCS
-	"src/cache.cc"
 	"src/buffer.cc"	
 )
 FILE(GLOB HEADERS
