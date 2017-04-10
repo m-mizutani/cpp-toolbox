@@ -62,6 +62,35 @@ TEST(LruHash, basic) {
   EXPECT_EQ(&d1, lru.pop());
 }
 
+TEST(LruHash, remove) {
+  tb::LruHash<MyData*> lru(10);
+  MyData d1(1);
+  tb::LruHash<MyData*>::Key k1(&d1.a_, sizeof(d1.a_));
+
+  // put node
+  EXPECT_TRUE(lru.put(2, k1, &d1));
+  const auto n1 = lru.get(k1);
+  EXPECT_FALSE(n1.is_null());
+  EXPECT_EQ(&d1, n1.data());
+  EXPECT_FALSE(lru.has_expired());
+
+  // still alive
+  lru.update(1);
+  EXPECT_TRUE(lru.has(k1));
+  EXPECT_FALSE(lru.has_expired());
+
+	// remove
+	EXPECT_TRUE(lru.remove(k1));
+	EXPECT_FALSE(lru.has(k1));
+  EXPECT_FALSE(lru.has_expired());
+	
+  // expired
+  lru.update(1);
+  EXPECT_FALSE(lru.has(k1));
+  EXPECT_FALSE(lru.has_expired());
+}
+	
+
 TEST(LruHash, multiple_data) {
   tb::LruHash<MyData*> lru(10);
   MyData d1(1), d2(2);

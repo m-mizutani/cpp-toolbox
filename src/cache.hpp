@@ -87,14 +87,15 @@ class LruHash {
     uint64_t update_;
     uint64_t tick_;
     uint32_t hv_;
+    bool active_;
 
    public:
     Node() : next_(nullptr), prev_(nullptr), link_(nullptr),
-             update_(0), tick_(0) {
+             update_(0), tick_(0), active_(true) {
     }
     Node(T data, const Key& key, uint64_t tick)
         : data_(data), key_(key), next_(nullptr), prev_(nullptr),
-          link_(nullptr), update_(0), tick_(tick) {
+          link_(nullptr), update_(0), tick_(tick), active_(true) {
     }
     virtual ~Node() {}
 
@@ -110,7 +111,12 @@ class LruHash {
 
     uint64_t tick() const { return this->tick_; }
     uint64_t update() const { return this->update_; }
+    bool active() const { return this->active_; }
 
+    void deactivate() {
+      this->active_ = false;
+    }
+    
     void attach(Node *node) {
       Node *prev = this;
       Node *next = this->next_;
@@ -262,6 +268,20 @@ class LruHash {
     return *node;
   }
 
+  bool remove(const Key& key) {
+    // Updated if hitting cache
+    size_t ptr = key.hv() % this->bucket_.size();
+    Node* node = this->bucket_[ptr].search(key);
+
+    if (node == nullptr) {
+      return false;
+    } else {
+      node->detach();
+      node->deactivate();
+      return true;
+    }
+  }
+  
   bool has(const Key& key) {
     size_t ptr = key.hv() % this->bucket_.size();
     return (this->bucket_[ptr].search(key) != nullptr);
@@ -279,7 +299,10 @@ class LruHash {
         node->detach();
         debug(false, "update: %llu, tick: %llu, curr_tick: %llu",
               node->update(), node->tick(), this->curr_tick_);
-        if (node->update() + node->tick() > this->curr_tick_) {
+
+        if (node->active() == false) {
+          delete node; // nothing to do
+        } else if (node->update() + node->tick() > this->curr_tick_) {
           const uint64_t remain = node->update() + node->tick()
                                   - this->curr_tick_;
           debug(false, "reinsert: %llu", remain);
