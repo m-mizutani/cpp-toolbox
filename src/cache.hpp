@@ -40,48 +40,49 @@
 
 namespace tb {
 
+class HashKey : public Buffer {
+ private:
+  uint32_t hv_;
+  bool has_hv_;
+
+ public:
+  HashKey() {
+  }
+  HashKey(const void* ptr, size_t len) : Buffer(ptr, len) {
+    // this->hv_ = hash32(this->ptr(), this->len());
+  }
+  HashKey(const HashKey& obj) : Buffer(obj) {
+    this->hv_ = obj.hv_;
+  }
+  ~HashKey() = default;
+
+  inline uint32_t hv() const { return this->hv_; }
+
+  bool operator==(const HashKey& obj) const {
+    assert(this->finalized());
+    assert(obj.finalized());
+
+    if (this->hv_ == obj.hv_ && this->Buffer::operator==(obj)) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void finalize() {
+    this->hv_ = hash32(this->ptr(), this->len());
+    this->Buffer::finalize();
+  }
+};
+
 template <typename T>
 class LruHash {
  public:
-  class Key : public Buffer {
-   private:
-    uint32_t hv_;
-    bool has_hv_;
-
-   public:
-    Key() {
-    }
-    Key(const void* ptr, size_t len) : Buffer(ptr, len) {
-      // this->hv_ = hash32(this->ptr(), this->len());
-    }
-    Key(const Key& obj) : Buffer(obj) {
-      this->hv_ = obj.hv_;
-    }
-    ~Key() = default;
-
-    inline uint32_t hv() const { return this->hv_; }
-
-    bool operator==(const Key& obj) const {
-      assert(this->finalized());
-      assert(obj.finalized());
-
-      if (this->hv_ == obj.hv_ && this->Buffer::operator==(obj)) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-
-    void finalize() {
-      this->hv_ = hash32(this->ptr(), this->len());
-      this->Buffer::finalize();
-    }
-  };
 
   class Node {
    private:
     T data_;
-    const Key key_;
+    const HashKey key_;
     Node *next_, *prev_;  // double linked list for Bucket
     Node *link_;          // single linked list for TimeSlot
     uint64_t update_;
@@ -93,7 +94,7 @@ class LruHash {
     Node() : next_(nullptr), prev_(nullptr), link_(nullptr),
              update_(0), tick_(0), active_(true) {
     }
-    Node(T data, const Key& key, uint64_t tick)
+    Node(T data, const HashKey& key, uint64_t tick)
         : data_(data), key_(key), next_(nullptr), prev_(nullptr),
           link_(nullptr), update_(0), tick_(tick), active_(true) {
     }
@@ -162,7 +163,7 @@ class LruHash {
       return (this->link_ != nullptr);
     }
 
-    Node* search(const Key& key) {
+    Node* search(const HashKey& key) {
       if (this->key_.finalized() && this->key_ == key) {
         return this;
       } else if (this->next_) {
@@ -172,7 +173,7 @@ class LruHash {
       }
     }
 
-    const Key& key() const {
+    const HashKey& key() const {
       return this->key_;
     }
   };
@@ -189,7 +190,7 @@ class LruHash {
     void attach(Node *node) {
       this->root_.attach(node);
     }
-    Node* search(const Key& key) {
+    Node* search(const HashKey& key) {
       return this->root_.search(key);
     }
   };
@@ -240,7 +241,7 @@ class LruHash {
     this->timeslot_[tp].push(node);
   }
 
-  bool put(uint64_t tick, const Key& key, T data) {
+  bool put(uint64_t tick, const HashKey& key, T data) {
     if (tick < 1) {
       return false;
     }
@@ -255,7 +256,7 @@ class LruHash {
     return true;
   }
 
-  const Node& get(const Key& key) {
+  const Node& get(const HashKey& key) {
     // Updated if hitting cache
     size_t ptr = key.hv() % this->bucket_.size();
     Node* node = this->bucket_[ptr].search(key);
@@ -268,7 +269,7 @@ class LruHash {
     return *node;
   }
 
-  bool remove(const Key& key) {
+  bool remove(const HashKey& key) {
     // Updated if hitting cache
     size_t ptr = key.hv() % this->bucket_.size();
     Node* node = this->bucket_[ptr].search(key);
@@ -282,9 +283,10 @@ class LruHash {
     }
   }
   
-  bool has(const Key& key) {
+  bool has(const HashKey& key) {
     size_t ptr = key.hv() % this->bucket_.size();
-    return (this->bucket_[ptr].search(key) != nullptr);
+		auto node = this->bucket_[ptr].search(key);
+    return (node != nullptr && node->active());
   }
 
   void update(uint64_t tick = 1) {   // progress tick
