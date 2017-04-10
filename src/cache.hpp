@@ -36,7 +36,7 @@
 #include "./exception.hpp"
 #include "./buffer.hpp"
 #include "./hash.hpp"
-#include "./debug.hpp"
+
 
 namespace tb {
 
@@ -107,7 +107,6 @@ class LruHash {
 
     void set_update(uint64_t curr_tick) {
       this->update_ = curr_tick;
-      debug(false, "update: %llu", this->update_);
     }
 
     uint64_t tick() const { return this->tick_; }
@@ -299,15 +298,12 @@ class LruHash {
       Node *node;
       while (nullptr != (node = this->timeslot_[tp].pop())) {
         node->detach();
-        debug(false, "update: %llu, tick: %llu, curr_tick: %llu",
-              node->update(), node->tick(), this->curr_tick_);
 
         if (node->active() == false) {
           delete node; // nothing to do
         } else if (node->update() + node->tick() > this->curr_tick_) {
           const uint64_t remain = node->update() + node->tick()
                                   - this->curr_tick_;
-          debug(false, "reinsert: %llu", remain);
           // re-insert
           this->insert(node, remain);
         } else {
