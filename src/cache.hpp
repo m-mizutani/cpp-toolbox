@@ -43,7 +43,6 @@ namespace tb {
 class HashKey : public Buffer {
  private:
   uint32_t hv_;
-  bool has_hv_;
 
  public:
   HashKey() {
