@@ -53,8 +53,8 @@ uint32_t hash32(const void *ptr, size_t data_len) {
     v = hash32_2value(v, *p);
   }
 
-  uint32_t r = *p;
   if (len > 0) {
+    uint32_t r = *p;
     uint32_t a = r & (0xffffffff >> (8 * (4 - len)));
     debug(false, "len:%zd, %08x, %08x", len, r, a);
     v = hash32_2value(v, a);
