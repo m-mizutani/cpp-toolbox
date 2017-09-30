@@ -325,6 +325,16 @@ class LruHash {
     return;
   }
 
+  void wipe() {
+    for (size_t i = 0; i <= this->timeslot_.size(); i++) {
+      Node *node;
+      while (nullptr != (node = this->timeslot_[i].pop())) {
+        node->detach();
+        this->exp_node_.push_link(node);
+      }
+    }
+  }
+
   bool has_expired() const {
     return this->exp_node_.has_link();
   }

@@ -259,4 +259,37 @@ TEST(LruHash, update) {
   EXPECT_FALSE(lru.has(k3));  // k3 has been expired
 }
 
+TEST(LruHash, wipe) {
+  tb::LruHash<MyData*> lru(10);
+  MyData d1(1), d2(2), d3(3);
+  tb::HashKey k1(&d1.a_, sizeof(d1.a_));
+  tb::HashKey k2(&d2.a_, sizeof(d2.a_));
+  tb::HashKey k3(&d3.a_, sizeof(d3.a_));
+
+  // start, tick: 0
+
+  // put node
+  EXPECT_TRUE(lru.put(1, k1, &d1));
+  EXPECT_TRUE(lru.put(3, k2, &d2));
+  EXPECT_TRUE(lru.put(9, k3, &d3));
+
+  EXPECT_TRUE(lru.has(k1));
+  EXPECT_TRUE(lru.has(k2));
+  EXPECT_TRUE(lru.has(k3));
+
+  lru.wipe();
+
+  EXPECT_FALSE(lru.has(k1));
+  EXPECT_FALSE(lru.has(k2));
+  EXPECT_FALSE(lru.has(k3));
+
+  EXPECT_TRUE(lru.has_expired());
+  EXPECT_NE(nullptr, lru.pop_expired());
+  EXPECT_TRUE(lru.has_expired());
+  EXPECT_NE(nullptr, lru.pop_expired());
+  EXPECT_TRUE(lru.has_expired());
+  EXPECT_NE(nullptr, lru.pop_expired());
+  EXPECT_FALSE(lru.has_expired());
+}
+
 }  // namespace lru_test
