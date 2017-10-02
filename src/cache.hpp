@@ -326,7 +326,7 @@ class LruHash {
   }
 
   void wipe() {
-    for (size_t i = 0; i <= this->timeslot_.size(); i++) {
+    for (size_t i = 0; i < this->timeslot_.size(); i++) {
       Node *node;
       while (nullptr != (node = this->timeslot_[i].pop())) {
         node->detach();
