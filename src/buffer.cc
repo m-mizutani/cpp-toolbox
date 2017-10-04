@@ -76,10 +76,7 @@ void Buffer::clear() {
 void Buffer::set(const void* ptr, size_t len) {
   assert(!this->finalized_);
 
-  if (this->buflen_ < len) {
-    this->resize(len);
-  }
-
+  this->resize(len);
   ::memcpy(this->buf_, ptr, len);
   this->len_ = len;
   this->finalize();

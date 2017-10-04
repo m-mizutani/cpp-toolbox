@@ -47,13 +47,18 @@ class HashKey : public Buffer {
  public:
   HashKey() {
   }
-  HashKey(const void* ptr, size_t len) : Buffer(ptr, len) {
+  HashKey(const void* ptr, size_t len) : Buffer(ptr, len), hv_(0) {
     // this->hv_ = hash32(this->ptr(), this->len());
   }
   HashKey(const HashKey& obj) : Buffer(obj) {
     this->hv_ = obj.hv_;
   }
   ~HashKey() = default;
+
+  void copy(const HashKey& obj) {
+    this->hv_ = obj.hv_;
+    this->set(obj.ptr(), obj.len());
+  }
 
   inline uint32_t hv() const { return this->hv_; }
 
@@ -81,7 +86,7 @@ class LruHash {
   class Node {
    private:
     T data_;
-    const HashKey key_;
+    HashKey key_;
     Node *next_, *prev_;  // double linked list for Bucket
     Node *link_;          // single linked list for TimeSlot
     uint64_t update_;
@@ -99,6 +104,12 @@ class LruHash {
     }
     virtual ~Node() {}
 
+    void set_param(T data, const HashKey& key, uint64_t tick) {
+      this->data_ = data;
+      this->key_.copy(key);
+      this->tick_ = tick;
+    }
+    
     // Read only methods
     T data() const { return this->data_; }
     virtual bool is_null() const { return (this->key_.len() == 0); }
@@ -106,7 +117,7 @@ class LruHash {
     uint64_t update() const { return this->update_; }
     bool active() const { return this->active_; }
     const HashKey& key() const { return this->key_; }
-
+    
     // Updatable methods
     void set_update(uint64_t curr_tick) {
       this->update_ = curr_tick;
@@ -209,6 +220,7 @@ class LruHash {
   Node exp_node_;
   static const size_t DEFAULT_BUCKET_SIZE = 1031;
   Node null_node_;
+  Node node_storage_;
   bool auto_update_;
 
   void insert(Node* node, uint64_t tick) {
@@ -237,7 +249,11 @@ class LruHash {
       this->bucket_.resize(DEFAULT_BUCKET_SIZE);
     }
   }
-  ~LruHash() {    
+  ~LruHash() {
+    Node* node;
+    while (nullptr != (node = this->node_storage_.pop_link())) {
+      delete node;
+    }
   }
 
   bool put(uint64_t tick, const HashKey& key, T data) {
@@ -248,7 +264,12 @@ class LruHash {
       return false;
     }
 
-    Node *node = new Node(data, key, tick);
+    Node *node = this->node_storage_.pop_link();
+    if (nullptr == node) {
+      node = new Node(data, key, tick);
+    } else {
+      node->set_param(data, key, tick);
+    }
     node->set_update(this->curr_tick_);
 
     this->insert(node, tick);
@@ -343,7 +364,7 @@ class LruHash {
     Node* node = this->exp_node_.pop_link();
     if (node) {
       T data = node->data();
-      delete node;
+      this->node_storage_.push_link(node);
       return data;
     } else {
       throw Exception::NoDataError("no more expired data");
