@@ -98,5 +98,9 @@ void Buffer::finalize() {
   this->finalized_ = true;
 }
 
+void Buffer::definalize() {
+  this->finalized_ = false;
+}
+
 
 }  // namespace tb

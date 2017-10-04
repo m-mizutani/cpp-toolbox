@@ -106,6 +106,7 @@ class LruHash {
 
     void set_param(T data, const HashKey& key, uint64_t tick) {
       this->data_ = data;
+      this->key_.definalize();
       this->key_.copy(key);
       this->tick_ = tick;
     }

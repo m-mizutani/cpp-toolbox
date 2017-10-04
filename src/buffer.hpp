@@ -51,6 +51,7 @@ class Buffer {
   void set(const void* ptr, size_t len);
   void append(const void* ptr, size_t len);
   virtual void finalize();
+  virtual void definalize();
 
   const void* ptr() const { return (this->len_ > 0) ? this->buf_ : nullptr; }
   size_t len() const { return this->len_; }
