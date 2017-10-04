@@ -61,8 +61,11 @@ bool Buffer::operator==(const Buffer& obj) const {
 }
 
 void Buffer::resize(size_t len) {
-  this->buf_ = realloc(this->buf_, len);
-  this->buflen_ = len;
+  // resize() do not make shorter buffer than current length
+  if (this->buflen_ < len) {
+    this->buf_ = realloc(this->buf_, len);
+    this->buflen_ = len;
+  }
 }
 
 void Buffer::clear() {
