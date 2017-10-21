@@ -37,7 +37,6 @@
 #include "./buffer.hpp"
 #include "./hash.hpp"
 
-
 namespace tb {
 
 class HashKey : public Buffer {
@@ -93,7 +92,7 @@ class LruHash {
     uint64_t tick_;
     uint32_t hv_;
     bool active_;
-
+    
    public:
     Node() : next_(nullptr), prev_(nullptr), link_(nullptr),
              update_(0), tick_(0), active_(true) {
@@ -172,6 +171,14 @@ class LruHash {
     }
 
     Node* search(const HashKey& key) {
+      for (Node* ptr = this; ptr; ptr = ptr->next_) {
+        if (ptr->key_.finalized() && ptr->key_ == key) {
+          return ptr;
+        }
+      }
+
+      return nullptr;
+      /*
       if (this->key_.finalized() && this->key_ == key) {
         return this;
       } else if (this->next_) {
@@ -179,6 +186,7 @@ class LruHash {
       } else {
         return nullptr;
       }
+      */
     }
   };
 
@@ -223,7 +231,7 @@ class LruHash {
   Node null_node_;
   Node node_storage_;
   bool auto_update_;
-
+  
   void insert(Node* node, uint64_t tick) {
     size_t ptr = node->key().hv() % this->bucket_.size();
     this->bucket_[ptr].attach(node);
